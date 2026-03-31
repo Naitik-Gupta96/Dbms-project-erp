@@ -1,10 +1,8 @@
-# DBMS Project Video Walkthrough Script (Beginner Friendly)
+# DBMS Project Walkthrough 
 
-Use this as a speaking script + checklist while recording a demo video.
+## 1) Intro 
 
-## 1) Intro (10-20 seconds)
 
-Say:
 
 "This is a DBMS Academic Portal project with a React frontend and Node.js + MongoDB backend. I will show setup and all three roles: Admin, Professor, and Student."
 
@@ -28,7 +26,7 @@ npm start
 
 If this machine shows watch-mode errors, use `npm start` (already shown above) and do not use `npm run dev`.
 
-Alternative for recording speed:
+Alternative :
 
 - Double-click `start-backend.bat` from project root.
 
@@ -60,7 +58,7 @@ Say:
 
 "Frontend is running at localhost:5500 and connected to backend."
 
-## 4) Admin Demo (1-2 minutes)
+## 4) Admin Demo 
 
 Login with:
 
@@ -82,7 +80,7 @@ Say:
 
 "Admin can manage users, courses, and timetable."
 
-## 5) Professor Demo (1-2 minutes)
+## 5) Professor Demo
 
 Logout, then login with:
 
@@ -103,8 +101,7 @@ Say:
 
 "Professor can update marks and manage announcements for their own courses."
 
-## 6) Student Demo (1-2 minutes)
-
+## 6) Student Demo 
 Logout, then login with:
 
 - Role: `student`
@@ -125,7 +122,7 @@ Say:
 
 "Student can register/drop courses and view announcements and timetable."
 
-## 7) Quick API Health Check (Optional, 15 seconds)
+## 7) Quick API Health Check 
 
 In browser or Postman:
 
@@ -135,14 +132,13 @@ Expected:
 
 - `Academic Portal API is running`
 
-## 8) Common Troubleshooting to mention (20-30 seconds)
+## 8) Common Troubleshooting to mention
 
 1. If login fails: run backend seed again (`npm run seed`).
 2. If frontend cannot load data: ensure backend terminal is still running.
 3. If token expires: login again.
 
-## 9) Outro (10 seconds)
-
+## 9) Outro 
 Say:
 
 "That was the complete DBMS portal flow across Admin, Professor, and Student roles."
