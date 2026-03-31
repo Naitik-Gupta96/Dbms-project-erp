@@ -4,23 +4,36 @@ import {
   adminCreateProf,
   adminCreateStudent,
   adminCreateTimetable,
+  adminDeleteCourse,
+  adminDeleteTimetable,
+  adminDeleteUser,
+  adminFetchCourses,
+  adminFetchTimetable,
   adminFetchUsers,
 } from '../api.js';
 
 function AdminDashboard({ onMessage }) {
   const [users, setUsers] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [timetable, setTimetable] = useState([]);
   const [form, setForm] = useState({});
   const [busy, setBusy] = useState(false);
   const profs = users.filter((user) => user.role === 'prof');
 
   useEffect(() => {
-    loadUsers();
+    loadData();
   }, []);
 
-  async function loadUsers() {
+  async function loadData() {
     try {
-      const data = await adminFetchUsers();
-      setUsers(data);
+      const [userData, courseData, timetableData] = await Promise.all([
+        adminFetchUsers(),
+        adminFetchCourses(),
+        adminFetchTimetable(),
+      ]);
+      setUsers(userData);
+      setCourses(courseData);
+      setTimetable(timetableData);
     } catch (err) {
       onMessage(err.message);
     }
@@ -67,8 +80,50 @@ function AdminDashboard({ onMessage }) {
       }
 
       onMessage(result.message || 'Saved successfully');
-      await loadUsers();
+      await loadData();
       setForm({});
+    } catch (err) {
+      onMessage(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteUser(user) {
+    if (!window.confirm(`Delete user ${user.email}?`)) return;
+    setBusy(true);
+    try {
+      const result = await adminDeleteUser(user._id);
+      onMessage(result.message || 'User deleted');
+      await loadData();
+    } catch (err) {
+      onMessage(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteCourse(course) {
+    if (!window.confirm(`Delete course ${course.course_code}?`)) return;
+    setBusy(true);
+    try {
+      const result = await adminDeleteCourse(course._id);
+      onMessage(result.message || 'Course deleted');
+      await loadData();
+    } catch (err) {
+      onMessage(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteTimetable(entry) {
+    if (!window.confirm(`Delete timetable entry for ${entry.course?.course_code || 'course'}?`)) return;
+    setBusy(true);
+    try {
+      const result = await adminDeleteTimetable(entry._id);
+      onMessage(result.message || 'Timetable entry deleted');
+      await loadData();
     } catch (err) {
       onMessage(err.message);
     } finally {
@@ -124,10 +179,30 @@ function AdminDashboard({ onMessage }) {
 
         <form className="form-stack" onSubmit={(event) => handleSubmit(event, 'timetable')}>
           <h4>Create timetable entry</h4>
-          <input placeholder="Course ID" value={form.timetableCourseId || ''} onChange={(e) => setForm({ ...form, timetableCourseId: e.target.value })} required />
-          <input placeholder="Day of week" value={form.timetableDay || ''} onChange={(e) => setForm({ ...form, timetableDay: e.target.value })} required />
-          <input placeholder="Start time" value={form.timetableStart || ''} onChange={(e) => setForm({ ...form, timetableStart: e.target.value })} required />
-          <input placeholder="End time" value={form.timetableEnd || ''} onChange={(e) => setForm({ ...form, timetableEnd: e.target.value })} required />
+          <select
+            value={form.timetableCourseId || ''}
+            onChange={(e) => setForm({ ...form, timetableCourseId: e.target.value })}
+            required
+          >
+            <option value="">Select course</option>
+            {courses.map((course) => (
+              <option key={course._id} value={course._id}>
+                {course.course_code} - {course.course_name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={form.timetableDay || ''}
+            onChange={(e) => setForm({ ...form, timetableDay: e.target.value })}
+            required
+          >
+            <option value="">Select day</option>
+            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
+              <option key={day} value={day}>{day}</option>
+            ))}
+          </select>
+          <input placeholder="Start time (HH:mm)" value={form.timetableStart || ''} onChange={(e) => setForm({ ...form, timetableStart: e.target.value })} required />
+          <input placeholder="End time (HH:mm)" value={form.timetableEnd || ''} onChange={(e) => setForm({ ...form, timetableEnd: e.target.value })} required />
           <input placeholder="Room no" value={form.timetableRoom || ''} onChange={(e) => setForm({ ...form, timetableRoom: e.target.value })} />
           <button className="btn btn-primary" type="submit" disabled={busy}>Create timetable</button>
         </form>
@@ -135,8 +210,8 @@ function AdminDashboard({ onMessage }) {
 
       <div className="card full-width">
         <div className="panel-toolbar">
-          <h3>Known users</h3>
-          <button className="btn btn-secondary" onClick={loadUsers}>Reload users</button>
+          <h3>Users</h3>
+          <button className="btn btn-secondary" onClick={loadData} disabled={busy}>Reload</button>
         </div>
         {users.length === 0 ? (
           <p>No users loaded yet.</p>
@@ -149,6 +224,7 @@ function AdminDashboard({ onMessage }) {
                 <th>Role</th>
                 <th>Name</th>
                 <th>Reference</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -159,6 +235,81 @@ function AdminDashboard({ onMessage }) {
                   <td>{user.role}</td>
                   <td>{user.first_name} {user.last_name}</td>
                   <td>{user.role === 'student' ? user.roll_no || 'N/A' : user.employee_id || 'N/A'}</td>
+                  <td>
+                    <button className="btn btn-danger" onClick={() => handleDeleteUser(user)} disabled={busy}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card full-width">
+        <h3>Courses</h3>
+        {courses.length === 0 ? (
+          <p>No courses available.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Credits</th>
+                <th>Professor</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courses.map((course) => (
+                <tr key={course._id}>
+                  <td>{course.course_code}</td>
+                  <td>{course.course_name}</td>
+                  <td>{course.credits}</td>
+                  <td>
+                    {course.professor?.first_name} {course.professor?.last_name}
+                  </td>
+                  <td>
+                    <button className="btn btn-danger" onClick={() => handleDeleteCourse(course)} disabled={busy}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card full-width">
+        <h3>Timetable</h3>
+        {timetable.length === 0 ? (
+          <p>No timetable entries.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Course</th>
+                <th>Day</th>
+                <th>Time</th>
+                <th>Room</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {timetable.map((item) => (
+                <tr key={item._id}>
+                  <td>{item.course?.course_code || 'N/A'}</td>
+                  <td>{item.day_of_week}</td>
+                  <td>{item.start_time} - {item.end_time}</td>
+                  <td>{item.room_no || 'N/A'}</td>
+                  <td>
+                    <button className="btn btn-danger" onClick={() => handleDeleteTimetable(item)} disabled={busy}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

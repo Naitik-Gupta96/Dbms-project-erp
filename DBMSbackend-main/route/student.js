@@ -5,12 +5,20 @@ const bcrypt = require("bcryptjs");
 const { User, Course, TakenCourse, Timetable, Announcement } = require("../db/index");
 const authenticateJWT = require("../middleware/auth");
 const isStudent = require("../middleware/student");
+const {
+  isValidObjectId,
+  normalizeString
+} = require("../utils/validation");
 require("dotenv").config();
 
 router.post("/signin", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const student = await User.findOne({ email, role: "student" });
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password are required" });
+    }
+
+    const student = await User.findOne({ email: String(email).toLowerCase(), role: "student" });
     if (!student) return res.status(404).json({ message: "Student not found" });
 
     const valid = await bcrypt.compare(password, student.password);
@@ -29,9 +37,13 @@ router.post("/signin", async (req, res) => {
 
 router.post("/register-course/:courseId", authenticateJWT, isStudent, async (req, res) => {
   const studentId = req.user.id;
-  const courseId = req.params.courseId;
+  const courseId = normalizeString(req.params.courseId);
 
   try {
+    if (!isValidObjectId(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
     const course = await Course.findById(courseId);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
@@ -47,6 +59,24 @@ router.post("/register-course/:courseId", authenticateJWT, isStudent, async (req
   }
 });
 
+router.delete("/register-course/:courseId", authenticateJWT, isStudent, async (req, res) => {
+  const studentId = req.user.id;
+  const courseId = normalizeString(req.params.courseId);
+
+  try {
+    if (!isValidObjectId(courseId)) {
+      return res.status(400).json({ message: "Invalid course id" });
+    }
+
+    const deleted = await TakenCourse.findOneAndDelete({ student: studentId, course: courseId });
+    if (!deleted) return res.status(404).json({ message: "Enrollment not found" });
+
+    res.json({ message: "Course dropped successfully" });
+  } catch (err) {
+    res.status(500).json({ message: "Drop failed", error: err.message });
+  }
+});
+
 router.get("/me", authenticateJWT, isStudent, async (req, res) => {
   try {
     const student = await User.findById(req.user.id).select("-password");
@@ -59,11 +89,10 @@ router.get("/me", authenticateJWT, isStudent, async (req, res) => {
 
 router.get("/my-courses", authenticateJWT, isStudent, async (req, res) => {
   try {
-    const taken = await TakenCourse.find({ student: req.user.id })
-      .populate({
-        path: "course",
-        populate: { path: "professor", select: "first_name last_name email employee_id" }
-      });
+    const taken = await TakenCourse.find({ student: req.user.id }).populate({
+      path: "course",
+      populate: { path: "professor", select: "first_name last_name email employee_id" }
+    });
     res.json(taken);
   } catch (err) {
     res.status(500).json({ message: "Failed to load registered courses", error: err.message });

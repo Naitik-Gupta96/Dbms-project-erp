@@ -114,6 +114,10 @@ textarea {
   background: #475569;
 }
 
+.btn-danger {
+  background: var(--danger);
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

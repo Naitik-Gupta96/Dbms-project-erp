@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
+  studentDropCourse,
   studentFetchAvailableCourses,
   studentFetchAnnouncements,
   studentFetchCourses,
@@ -49,7 +50,22 @@ function StudentDashboard({ onMessage }) {
       const result = await studentRegisterCourse(registrationId);
       onMessage(result.message || 'Course registered');
       setRegistrationId('');
-      loadAll();
+      await loadAll();
+    } catch (err) {
+      onMessage(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDrop(courseId) {
+    if (!window.confirm('Drop this course?')) return;
+    setBusy(true);
+    onMessage('');
+    try {
+      const result = await studentDropCourse(courseId);
+      onMessage(result.message || 'Course dropped');
+      await loadAll();
     } catch (err) {
       onMessage(err.message);
     } finally {
@@ -109,6 +125,11 @@ function StudentDashboard({ onMessage }) {
                 <div>Course ID: {item.course._id}</div>
                 <div>Credits: {item.course.credits}</div>
                 <div>Marks: {item.marks ?? 'N/A'} | Grade: {item.grade || 'N/A'}</div>
+                <div>
+                  <button className="btn btn-danger" onClick={() => handleDrop(item.course._id)} disabled={busy}>
+                    Drop course
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

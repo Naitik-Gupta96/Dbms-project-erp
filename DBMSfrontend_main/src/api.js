@@ -27,7 +27,10 @@ export async function request(path, options = {}) {
 
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 400 && data.message === 'Invalid or Expired token') {
+    if (
+      response.status === 401 &&
+      (data.message === 'Invalid or expired token' || data.message === 'Invalid or Expired token')
+    ) {
       clearToken();
       localStorage.removeItem('dbmsRole');
     }
@@ -64,8 +67,28 @@ export async function adminFetchUsers() {
   return request('/admin/users');
 }
 
+export async function adminDeleteUser(userId) {
+  return request(`/admin/users/${userId}`, { method: 'DELETE' });
+}
+
 export async function profFetchStudents() {
   return request('/prof/students');
+}
+
+export async function adminFetchCourses() {
+  return request('/admin/courses');
+}
+
+export async function adminDeleteCourse(courseId) {
+  return request(`/admin/courses/${courseId}`, { method: 'DELETE' });
+}
+
+export async function adminFetchTimetable() {
+  return request('/admin/timetable');
+}
+
+export async function adminDeleteTimetable(timetableId) {
+  return request(`/admin/timetable/${timetableId}`, { method: 'DELETE' });
 }
 
 export async function profFetchCourses() {
@@ -78,6 +101,18 @@ export async function profUpdateMarks(payload) {
 
 export async function profCreateAnnouncement(payload) {
   return request('/prof/announcements', { method: 'POST', body: payload });
+}
+
+export async function profFetchAnnouncements() {
+  return request('/prof/announcements');
+}
+
+export async function profUpdateAnnouncement(announcementId, payload) {
+  return request(`/prof/announcements/${announcementId}`, { method: 'PATCH', body: payload });
+}
+
+export async function profDeleteAnnouncement(announcementId) {
+  return request(`/prof/announcements/${announcementId}`, { method: 'DELETE' });
 }
 
 export async function studentFetchProfile() {
@@ -102,6 +137,10 @@ export async function studentFetchTimetable() {
 
 export async function studentRegisterCourse(courseId) {
   return request(`/student/register-course/${courseId}`, { method: 'POST' });
+}
+
+export async function studentDropCourse(courseId) {
+  return request(`/student/register-course/${courseId}`, { method: 'DELETE' });
 }
 
 export function saveToken(token) {

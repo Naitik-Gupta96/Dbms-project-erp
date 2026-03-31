@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import {
   profCreateAnnouncement,
+  profDeleteAnnouncement,
+  profFetchAnnouncements,
   profFetchCourses,
   profFetchStudents,
   profUpdateMarks,
@@ -9,6 +11,7 @@ import {
 function ProfDashboard({ onMessage }) {
   const [students, setStudents] = useState([]);
   const [courses, setCourses] = useState([]);
+  const [announcements, setAnnouncements] = useState([]);
   const [marks, setMarks] = useState({});
   const [announcement, setAnnouncement] = useState({});
   const [busy, setBusy] = useState(false);
@@ -19,12 +22,14 @@ function ProfDashboard({ onMessage }) {
 
   async function loadDashboard() {
     try {
-      const [studentData, courseData] = await Promise.all([
+      const [studentData, courseData, announcementData] = await Promise.all([
         profFetchStudents(),
         profFetchCourses(),
+        profFetchAnnouncements(),
       ]);
       setStudents(studentData);
       setCourses(courseData);
+      setAnnouncements(announcementData);
     } catch (err) {
       onMessage(err.message);
     }
@@ -64,6 +69,21 @@ function ProfDashboard({ onMessage }) {
       });
       onMessage(result.message || 'Announcement created');
       setAnnouncement({});
+      await loadDashboard();
+    } catch (err) {
+      onMessage(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDeleteAnnouncement(item) {
+    if (!window.confirm(`Delete announcement "${item.title}"?`)) return;
+    setBusy(true);
+    try {
+      const result = await profDeleteAnnouncement(item._id);
+      onMessage(result.message || 'Announcement deleted');
+      await loadDashboard();
     } catch (err) {
       onMessage(err.message);
     } finally {
@@ -174,6 +194,38 @@ function ProfDashboard({ onMessage }) {
           <textarea placeholder="Message" value={announcement.message || ''} onChange={(e) => setAnnouncement({ ...announcement, message: e.target.value })} required />
           <button className="btn btn-primary" type="submit" disabled={busy}>Create announcement</button>
         </form>
+      </div>
+
+      <div className="card full-width">
+        <h3>Your announcements</h3>
+        {announcements.length === 0 ? (
+          <p>No announcements yet.</p>
+        ) : (
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Course</th>
+                <th>Message</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {announcements.map((item) => (
+                <tr key={item._id}>
+                  <td>{item.title}</td>
+                  <td>{item.course?.course_code || 'N/A'}</td>
+                  <td>{item.message}</td>
+                  <td>
+                    <button className="btn btn-danger" onClick={() => handleDeleteAnnouncement(item)} disabled={busy}>
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
